@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,8 +9,7 @@
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 16px; }
     .wrap { max-width: 720px; }
     .card { padding: 16px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 14px; }
-    h2 { margin: 0 0 8px 0; }
-    h3 { margin: 0 0 10px 0; }
+    h2, h3 { margin: 0 0 10px 0; }
     label { display:block; margin-top: 10px; font-weight: 600; }
     input { width: 100%; padding: 10px; margin-top: 6px; font-size: 16px; }
     button { margin-top: 14px; padding: 10px 12px; font-size: 16px; cursor: pointer; }
@@ -17,8 +17,6 @@
     .muted { color:#555; font-size: 13px; margin-top: 10px; }
     .row { display:flex; gap:12px; flex-wrap: wrap; }
     .row > div { flex: 1; min-width: 180px; }
-    hr { border: 0; border-top: 1px solid #e0e0e0; margin: 12px 0; }
-    .pill { display:inline-block; padding: 2px 8px; border-radius: 999px; background:#eee; font-size: 12px; margin-left: 6px; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e6e6e6; }
     th { font-weight: 700; }
@@ -29,13 +27,13 @@
 
     <div class="card">
       <h2>Weight-Based Dialysis Calculator</h2>
-      <div class="muted">Includes (1) HD UF range by UFR band and (2) CRRT effluent dose targets.</div>
+      <div class="muted">Includes HD UF range and CRRT effluent dose (L/hr only).</div>
     </div>
 
     <!-- HD UF Range -->
     <div class="card">
       <h3>1) Intermittent HD: UF Range</h3>
-      <div class="muted">Uses UFR band <b>10–13 mL/kg/hr</b> to estimate UF volume range.</div>
+      <div class="muted">UFR target band: <b>10–13 mL/kg/hr</b></div>
 
       <div class="row">
         <div>
@@ -48,22 +46,14 @@
         </div>
       </div>
 
-      <button onclick="calcHD()">Calculate HD UF Range</button>
+      <button onclick="calcHD()">Calculate HD UF</button>
       <div id="hd_out" class="out" style="display:none;"></div>
-
-      <div class="muted">
-        Formula: UF (mL) = Weight (kg) × Duration (hr) × UFR (mL/kg/hr).
-      </div>
     </div>
 
     <!-- CRRT Dose -->
     <div class="card">
-      <h3>2) CRRT: Effluent Dose Targets</h3>
-      <div class="muted">
-        Outputs target effluent rate for <b>20 / 25 / 30 mL/kg/hr</b>
-        <span class="pill">mL/hr</span>
-        <span class="pill">L/day</span>
-      </div>
+      <h3>2) CRRT: Effluent Dose</h3>
+      <div class="muted">Standard prescribed doses: <b>20 / 25 / 30 mL/kg/hr</b></div>
 
       <div class="row">
         <div>
@@ -74,16 +64,12 @@
 
       <button onclick="calcCRRT()">Calculate CRRT Dose</button>
       <div id="crrt_out" class="out" style="display:none;"></div>
-
-      <div class="muted">
-        Effluent rate (mL/hr) = Weight (kg) × Dose (mL/kg/hr). L/day = (mL/hr × 24) / 1000.
-      </div>
     </div>
 
   </div>
 
   <script>
-    function fmt(n, digits=0) {
+    function fmt(n, digits=2) {
       return Number.isFinite(n) ? n.toFixed(digits) : "—";
     }
 
@@ -94,36 +80,28 @@
 
       if (!Number.isFinite(w) || !Number.isFinite(t) || w <= 0 || t <= 0) {
         out.style.display = "block";
-        out.innerHTML = "<b>Please enter a valid weight and duration.</b>";
+        out.innerHTML = "<b>Please enter valid inputs.</b>";
         return;
       }
 
-      const ufrLow = 10;  // mL/kg/hr
-      const ufrHigh = 13; // mL/kg/hr
-      const ufrMid = 11.5;
-
-      const ufLow_mL  = w * t * ufrLow;
-      const ufMid_mL  = w * t * ufrMid;
-      const ufHigh_mL = w * t * ufrHigh;
+      const rates = [10, 11.5, 13];
+      const rows = rates.map(r => {
+        const ufL = (w * t * r) / 1000;
+        return `<tr>
+          <td>${r}</td>
+          <td>${fmt(ufL)}</td>
+        </tr>`;
+      }).join("");
 
       out.style.display = "block";
       out.innerHTML = `
-        <div><b>Inputs:</b> Weight ${fmt(w,1)} kg; Duration ${fmt(t,1)} hr</div>
-        <hr>
-        <div><b>UF Volume Range (by UFR):</b></div>
+        <div><b>Inputs:</b> ${fmt(w,1)} kg, ${fmt(t,1)} hr</div>
         <table>
           <thead>
-            <tr><th>UFR (mL/kg/hr)</th><th>UF (mL)</th><th>UF (L)</th></tr>
+            <tr><th>UFR (mL/kg/hr)</th><th>UF Volume (L)</th></tr>
           </thead>
-          <tbody>
-            <tr><td>10</td><td>${fmt(ufLow_mL,0)}</td><td>${fmt(ufLow_mL/1000,2)}</td></tr>
-            <tr><td>11.5 (midpoint)</td><td>${fmt(ufMid_mL,0)}</td><td>${fmt(ufMid_mL/1000,2)}</td></tr>
-            <tr><td>13</td><td>${fmt(ufHigh_mL,0)}</td><td>${fmt(ufHigh_mL/1000,2)}</td></tr>
-          </tbody>
+          <tbody>${rows}</tbody>
         </table>
-        <div class="muted" style="margin-top:10px;">
-          UF (mL) = ${fmt(w,1)} × ${fmt(t,1)} × UFR
-        </div>
       `;
     }
 
@@ -137,31 +115,24 @@
         return;
       }
 
-      const doses = [20, 25, 30]; // mL/kg/hr (effluent)
+      const doses = [20, 25, 30];
       const rows = doses.map(d => {
-        const mlhr = w * d;
-        const lday = (mlhr * 24) / 1000;
+        const lhr = (w * d) / 1000;
         return `<tr>
           <td>${d}</td>
-          <td>${fmt(mlhr,0)}</td>
-          <td>${fmt(lday,2)}</td>
+          <td>${fmt(lhr)}</td>
         </tr>`;
       }).join("");
 
       out.style.display = "block";
       out.innerHTML = `
-        <div><b>Input:</b> Weight ${fmt(w,1)} kg</div>
-        <hr>
-        <div><b>CRRT Effluent Dose Targets:</b></div>
+        <div><b>Weight:</b> ${fmt(w,1)} kg</div>
         <table>
           <thead>
-            <tr><th>Dose (mL/kg/hr)</th><th>Target Effluent (mL/hr)</th><th>Target Effluent (L/day)</th></tr>
+            <tr><th>Dose (mL/kg/hr)</th><th>Effluent Rate (L/hr)</th></tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
-        <div class="muted" style="margin-top:10px;">
-          Effluent (mL/hr) = ${fmt(w,1)} × Dose
-        </div>
       `;
     }
   </script>
